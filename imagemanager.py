@@ -1,21 +1,28 @@
 
-import sqlite3
+from skyfront import SQL
+
+db = os.path.join(os.getcwd(), 'images.sqlite')
 
 class Manager:
     def __init__(self):
-        self.queries = []        
-        
+        self.sql = SQL('sqlite', db)
+
     def addToBase(self, name, path, sha1):
-        self.queries.append('INSERT INTO `images` (name, path, sha1) VALUES ("'+name+'", "'+path+'", "'+sha1+'")')
+        self.sql.insertNew('images', name=name, path=path, hash=sha1)
 
-    def commit(self, db):
-        if len(self.queries):
-            conn = sqlite3.connect(db)
-            cursor = conn.cursor()
-            for qw in self.queries:
-                cursor.execute(qw)                
-            conn.commit()
-            cursor.close()
- 
+    def removeFromBase(self, name, path, sha1):
+        self.sql.delete('images', name=name, path=path, hash=sha1)
 
-            
+    def setupDB():
+        if not os.path.exists(db):
+            open(path,'w').close()
+        self.sql = SQL('sqlite', db)
+        self.sql.executeQuery("""CREATE TABLE IF NOT EXISTS `images` (
+                                id INTEGER PRIMARY KEY autoincrement,
+                                name VARCHAR NOT NULL,
+                                path VARCHAR NOT NULL,
+                                hash VARCHAR NOT NULL)""")
+        #self.sql.executeQuery("""CREATE TABLE IF NOT EXISTS `tags` (
+        #                        id INTEGER PRIMARY KEY autoincrement,
+        #                        hash VARCHAR NOT NULL,
+        #                        tag VARCHAR NOT NULL)""")

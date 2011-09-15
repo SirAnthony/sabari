@@ -4,7 +4,7 @@ import mimetypes
 import hashlib
 from PIL import Image
 import time
-from threading import Thread, Lock, activeCount
+from threading import Thread, Lock
 import Cookie
 from imagemanager import Manager
 
@@ -12,10 +12,13 @@ from mako import exceptions
 from mako.template import Template
 
 import cgi
-import re
+
+try:
+    import cache
+except:
+    cache = None
 
 version = 1.99
-db = '/var/www/sqlitedb/images.sqlite'
 
 root = '/'
 error_style = 'html'
@@ -30,7 +33,6 @@ class Time:
     @classmethod
     def now(cls):
         cls.time = time.time()
-
 
 def serve(environ, start_response):
     """serves requests using the WSGI callable interface."""
@@ -72,7 +74,6 @@ def pubdata(form):
     print "Content-type: text/html; charset=utf8\n\n";
     print text
 
-
 def process(uri, environ):
     cookie = Cookie.SimpleCookie()
     try:
@@ -81,11 +82,20 @@ def process(uri, environ):
         pass
     template = Template(filename=os.path.join(os.getcwd(), 'page.tpl'),
                         input_encoding='utf-8')
+    processdir = os.path.join(root, uri)
+    localfilename = os.path.join(uri, filename)
+    modified = os.stat(processdir).st_mtime
+    if cache:
+        c = cache.get(processdir)
+        if c and c['modified'] == modified:
+            return c['data']
     mimetypes.init()
-    listing = os.listdir(os.path.join(root, uri))
+    listing = os.listdir(processdir)
     files = []
-    content = [{'href': '..', 'img': '/icon/back.png',
-                'alt': 'Parent', 'desc': 'Parent directory'}]
+    content = []
+    if uri and uri != '/':
+        content.append({'href': '..', 'img': '/icon/back.png',
+                'alt': 'Parent', 'desc': 'Parent directory'})
     try:
         cols = int(cookie.get('viewcols', 4))
     except:
@@ -95,7 +105,7 @@ def process(uri, environ):
         if os.path.isfile(os.path.join(root, uri, filename)):
             files.append(filename)
         else:
-            content.append({'href': os.path.join(uri, filename),
+            content.append({'href': localfilename,
                             'img': '/icon/folder.png',
                             'alt': 'Folder',
                             'desc': filename
@@ -104,11 +114,10 @@ def process(uri, environ):
         if filename.find('.') == 0:
             continue
         filetype = mimetypes.guess_type(filename)[0]
-        name = os.path.join(uri, filename)
-        fl = {'href': os.path.join(uri, filename)}
+        fl = {'href': localfilename}
         if filetype and filetype.find('image') >= 0 and filetype.find('djvu') < 0:
-            hval = hashlib.md5(name).hexdigest()
-            result, imtype = imagework(hval, filename, os.path.join(root, uri))
+            hval = hashlib.sha1(localfilename).hexdigest()
+            result, imtype = imagework(hval, filename, processdir)
             if result:
                 fl['src'] = '/cache/' + hval + imtype
                 fl['name'] = hval
@@ -127,11 +136,14 @@ def process(uri, environ):
     content.extend([None] * (cols - ((len(content) % cols) or cols)))
     content = zip(*[iter(content)]*cols)
     if template:
-        return template.render(version=version,
+        rendered = template.render(version=version,
             time = Time.get(),
             path = uri,
             items = content,
         ).encode('utf-8')
+        if cache:
+            cache.set(processdir, {'modified': modified, 'data': rendered})
+        return rendered
 
 class ImageCreator(Thread):
 
@@ -168,15 +180,9 @@ class ImageCreator(Thread):
                 manager.addToBase(self.filename, self.filepath, sha1)
 
 def imagework(hval, filename, path):
-    cpath = '/var/www/cache/' + hval
+    cpath = './cache/' + hval
     for ext in ('.jpg', 'jpg', '.png', '.gif'):
         if os.path.isfile(cpath + ext):
             return True, ext
     ImageCreator(filename, path, cpath).start()
     return None, None
-
-if __name__ == '__main__':
-    import wsgiref.simple_server
-    server = wsgiref.simple_server.make_server('', 8000, serve)
-    print "Server listening on port %d" % 8000
-    server.serve_forever()
