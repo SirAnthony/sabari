@@ -1,4 +1,5 @@
 
+import os
 from skyfront import SQL
 
 db = os.path.join(os.getcwd(), 'images.sqlite')
@@ -9,6 +10,12 @@ class Manager:
 
     def addToBase(self, name, path, sha1):
         self.sql.insertNew('images', name=name, path=path, hash=sha1)
+
+    def clearOldFiles(self, path, files):
+        status, files = self.sql.getRecords('images', path=path)
+        if status:
+            pass
+
 
     def removeFromBase(self, name, path, sha1):
         self.sql.delete('images', name=name, path=path, hash=sha1)
