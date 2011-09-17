@@ -5,9 +5,8 @@ import Cookie
 import hashlib
 import mime
 import time
-from PIL import Image
-from imagemanager import Manager
-from threading import Thread, Lock
+from imagemanager import Manager, ImageCreator
+
 
 from mako import exceptions
 from mako.template import Template
@@ -111,44 +110,45 @@ def process(uri, environ):
     content = []
     images = []
     if uri and uri != '/':
-        content.append({'href': '..', 'img': '/icon/back.png',
-                'alt': 'Parent', 'desc': 'Parent directory'})
+        content.append({'href': u'../', 'img': u'/icon/back.png',
+                'alt': u'Parent', 'desc': u'Parent directory'})
     try:
         cols = int(cookie.get('viewcols', 4))
     except:
         cols = 4
     for filename in listing:
-        if filename.find('.') == 0: continue
+        if filename.find('.') == 0:
+            continue
         if os.path.isfile(os.path.join(root, uri, filename)):
             files.append(filename)
         else:
-            content.append({'href': os.path.join(uri, filename),
-                            'img': '/icon/folder.png',
-                            'alt': 'Folder',
-                            'desc': filename
+            content.append({'href': os.path.join(uri, filename + u'/').decode('utf-8'),
+                            'img': u'/icon/folder.png',
+                            'alt': u'Folder',
+                            'desc': filename.decode('utf-8')
             })
     for filename in files:
         if filename.find('.') == 0:
             continue
+        filename = filename.decode('utf-8')
         localfilename = os.path.join(uri, filename)
         filetype = mime.guessType(filename)
         fl = {'href': localfilename}
         if filetype and filetype.find('image') >= 0 and filetype.find('djvu') < 0:
-            hval = hashlib.sha1(localfilename).hexdigest()
+            hval = hashlib.sha1(localfilename.encode('utf-8')).hexdigest().decode('utf-8')
             result, imtype = imagework(hval, filename, processdir)
+            fl.update({'name': hval, 'alt': u'img'})
             if result:
                 fl['src'] = os.path.join(cachepath, hval + imtype)
-                fl['name'] = hval
-                fl['alt'] = 'img'
             else:
-                fl['desc'] = 'Thumbinal creation.'
+                fl['desc'] = u'Thumbinal creation.'
         else:
             if filetype:
                 filetype = filetype.replace('/', '-')
             else:
                 filetype = 'text-plain'
             fl['alt'] = filetype
-            fl['src'] = '/icon/%s.png' % filetype
+            fl['src'] = u'/icon/%s.png' % filetype
             fl['desc'] = filename
         content.append(fl)
     manager.clearOldFiles(processdir, filter(lambda x: \
@@ -165,44 +165,11 @@ def process(uri, environ):
             cache.set(processdir, {'modified': modified, 'data': rendered})
         return rendered
 
-class ImageCreator(Thread):
-
-    lock = Lock()
-
-    def __init__ (self, filename, fpath, spath):
-        Thread.__init__(self)
-        self.spath = spath
-        self.filepath = fpath
-        self.filename = filename
-
-    def run(self):
-        maxsize = 200
-        ext = '.jpg'
-        with open(os.path.join(self.filepath, self.filename)) as f:
-            im = Image.open(f)
-            format = im.format
-            if not format: format = 'JPEG'
-            if format == 'PNG': ext = '.png'
-            if format == 'GIF': ext = '.gif'
-            w,h = im.size
-            if h > w:
-                w = (float(w)/float(h))*maxsize
-                h = maxsize
-            else:
-                h = (float(h)/float(w))*maxsize
-                w = maxsize
-            im.thumbnail((int(w),int(h)), Image.ANTIALIAS)
-            try: im.save(self.spath + ext, format)
-            #TODO: debug
-            except IOError: return
-            sha1 = hashlib.sha1(f.read()).hexdigest()
-            with self.lock:
-                manager.addToBase(self.filename, self.filepath, sha1)
-
 def imagework(hval, filename, path):
     cpath = os.path.join(cachepath, hval)
     for ext in ('.jpg', 'jpg', '.png', '.gif'):
         if os.path.isfile(cpath + ext):
             return True, ext
     ImageCreator(filename, path, cpath).start()
+    manager.addToBase(filename, path, hval)
     return None, None

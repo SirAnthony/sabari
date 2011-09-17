@@ -15,10 +15,10 @@
                 % for item in row:
                 % if item:
                 <td valign="top" align="center">
-                    <a href="${item.get('href').decode('utf-8')}">
+                    <a href="${ item.get('href') }">
                         <img src="${item.get('src', '')}" width="165" height="165" alt="${item.get('alt', '')}" name="${item.get('name', '')}"><br />
                         % if item.has_key('desc'):
-                        ${ item.get('desc').decode('utf-8')}
+                        ${ item.get('desc') }
                         % endif
                     </a>
                 </td>
