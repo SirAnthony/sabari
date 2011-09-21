@@ -34,7 +34,7 @@
                 Access to video files permanently closed.
             </span><br />
             Sabari v ${version}<br />
-            Time: ${time} s.<br />
+            Time: <span name="time">${time}</span> s.<br />
             Original <a href="https://github.com/SirAnthony/sabari">script</a> by
             <a href="mailto:anthony[at]adsorbtion.org">Sir Anthony</a>
         </p>

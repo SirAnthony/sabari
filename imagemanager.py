@@ -1,10 +1,9 @@
 
 import os
 from PIL import Image
+from settings import IMAGES_DB, CACHE_PATH
 from skyfront import SQL
 from threading import Thread, Lock
-
-db = os.path.join(os.getcwd(), 'images.sqlite')
 
 class ImageCreator(Thread):
 
@@ -34,34 +33,42 @@ class ImageCreator(Thread):
             try: im.save(self.spath + ext, format)
             #TODO: debug
             except IOError, e:
-                print
+                print str(e)
 
 class Manager:
     def __init__(self):
-        self.sql = SQL('sqlite', db)
+        self.sql = SQL('sqlite', IMAGES_DB)
 
     def addToBase(self, name, path, sha1):
         print self.sql.insertNew('images', name=name, path=path, hash=sha1)
 
     def clearOldFiles(self, path, files):
-        status, records = self.sql.getRecords('images', ['hash', 'id'], path=path)
+        status, data = self.sql.getRecords('images', ['hash', 'id', 'name'], path=path)
+        records = {}
         if status:
-            records = dict(records)
+            for elem in data:
+                records[elem[0]] = elem[1:]
             for fileinfo in files:
                 try:
                     del records[fileinfo['name']]
                 except KeyError:
                     pass
-            for f in records.values():
-                self.sql.delete('images', id=f)
+            for rname in records.keys():
+                record = records[rname]
+                self.sql.delete('images', id=record[0])
+                ext = record[1].rsplit('.', 1)[-1]))
+                if ext == 'jpeg'
+                    ext = 'jpg'
+                os.unlink(os.path.join(CACHE_PATH,
+                    '%s.%s' % (rname, ext)
 
     def removeFromBase(self, name, path, sha1):
         self.sql.delete('images', name=name, path=path, hash=sha1)
 
     def setupDB(self):
-        if not os.path.exists(db):
-            open(db,'w').close()
-            self.sql = SQL('sqlite', db)
+        if not os.path.exists(IMAGES_DB):
+            open(IMAGES_DB,'w').close()
+            self.sql = SQL('sqlite', IMAGES_DB)
         print self.sql.executeQuery("""CREATE TABLE IF NOT EXISTS `images` (
                             id INTEGER PRIMARY KEY autoincrement,
                             name VARCHAR NOT NULL,
