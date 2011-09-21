@@ -1,10 +1,14 @@
 import os
 
-ROOT = '/'
-CACHE_PATH = os.path.join(os.getcwd(), 'imagecache')
+ROOT = '/var/www/site/'
+CACHE_PATH = '/var/www/cache/'
+CACHE_URL = '/cache/'
+ICONS_URL = '/icon/'
+TEMPLATE_PATH = os.path.join(os.path.dirname(__file__), 'template')
+
 ERROR_STYLE = 'html'
 
-IMAGES_DB = os.path.join(os.getcwd(), 'images.sqlite')
+IMAGES_DB = '/var/www/sqlitedb/images.sqlite'
 
 CACHES = {
     'default': {

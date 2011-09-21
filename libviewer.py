@@ -1,13 +1,15 @@
+# -*- coding: utf-8 -*-
 
 import os
 
 import Cookie
-import hashlib
 import mime
 import time
 import re
+from hashlib import sha1
 from imagemanager import Manager, ImageCreator
-from settings import ROOT, CACHE_PATH, ERROR_STYLE
+from settings import ROOT, CACHE_PATH, CACHE_URL, ICONS_URL, \
+                     TEMPLATE_PATH, ERROR_STYLE
 
 from mako import exceptions
 from mako.template import Template
@@ -17,7 +19,7 @@ try:
 except:
     cache = None
 
-version = '2.0a1'
+version = '2.0b1'
 
 manager = Manager()
 
@@ -63,22 +65,35 @@ def serve(environ, start_response):
             start_response("200 OK", [('Content-type','text/html')])
             return [exceptions.html_error_template().render()]
 
-def pubdata(form):
-    uri = form.get('d')
+def pubdata():
+    from urllib import unquote
+    uri = unquote(os.environ.get('REQUEST_URI'))
+    ctype = 'text/html'
     try:
         text = process(uri, os.environ)
+    except NotFound:
+        text = "Not found: '%s'" % uri
+    except NotADir:
+        filename = os.path.join(ROOT, uri)
+        ctype = mime.guessType(uri)
+        text = file(filename).read()
+    except exceptions.TopLevelLookupException:
+        text = "Cant find template '%s'" % uri
     except:
         if ERROR_STYLE == 'text':
-            start_response("200 OK", [('Content-type','text/plain')])
+            ctype = 'text/plain'
             text = exceptions.text_error_template().render()
         else:
-            start_response("200 OK", [('Content-type','text/html')])
             text = exceptions.html_error_template().render()
-    print "Content-type: text/html; charset=utf8\n\n";
+    print "Content-type: %s; charset=utf8\n" % ctype
     print text
 
 def process(uri, environ):
+    if uri[0] == '/':
+        uri = uri[1:]
     processdir = os.path.join(ROOT, uri)
+    processdirhash = sha1(processdir).hexdigest()
+
     if not os.path.exists(processdir):
         raise NotFound
     if os.path.isfile(processdir):
@@ -86,59 +101,62 @@ def process(uri, environ):
 
     modified = os.stat(processdir).st_mtime
     if cache:
-        c = cache.get(processdir)
+        c = cache.get(processdirhash)
         if c and c['modified'] == modified:
             close_cache()
             data = re.sub('(?<=<span name="time">)[\d\.]+', str(Time.get()), c['data'])
             return data
 
-    cookie = Cookie.SimpleCookie()
-    try:
-        cookie.load(environ.get('HTTP_COOKIE'))
-    except:
-        pass
-    template = Template(filename=os.path.join(os.getcwd(), 'page.tpl'),
-                    input_encoding='utf-8')
-    print 'Creation'
+    template = Template(filename=os.path.join(TEMPLATE_PATH, 'page.tpl'),
+                    input_encoding='utf-8', output_encoding='utf-8')
+
     listing = os.listdir(processdir)
     files = []
     content = []
     images = []
     thumbs = False
+
     if uri and uri != '/':
-        content.append({'href': u'../', 'img': u'/icon/back.png',
-                'alt': u'Parent', 'desc': u'Parent directory'})
+        content.append({'href': '../', 'src': ICONS_URL + 'back.png',
+                'alt': 'Parent', 'desc': 'Parent directory',
+                'w': 165})
+
     try:
+        cookie = Cookie.SimpleCookie()
+        cookie.load(environ.get('HTTP_COOKIE'))
         cols = int(cookie.get('viewcols', 4))
     except:
         cols = 4
+
     for filename in listing:
         if filename.find('.') == 0:
             continue
         if os.path.isfile(os.path.join(ROOT, uri, filename)):
             files.append(filename)
         else:
-            content.append({'href': os.path.join(uri, filename + u'/').decode('utf-8'),
-                            'img': u'/icon/folder.png',
-                            'alt': u'Folder',
-                            'desc': filename.decode('utf-8')
+            content.append({'href': os.path.join('/', uri, filename + '/').decode('utf-8'),
+                            'src': ICONS_URL + 'folder.png',
+                            'alt': 'Folder',
+                            'desc': filename.decode('utf-8'),
+                            'w': 165
             })
+
     for filename in files:
         if filename.find('.') == 0:
             continue
-        filename = filename.decode('utf-8')
+        filename = filename
         localfilename = os.path.join(uri, filename)
         filetype = mime.guessType(filename)
-        fl = {'href': localfilename}
+        fl = {'href': '/%s' % localfilename.decode('utf-8') }
         if filetype and filetype.find('image') >= 0 and filetype.find('djvu') < 0:
             #FIXME: hash for files, not for paths
-            hval = hashlib.sha1(localfilename.encode('utf-8')).hexdigest().decode('utf-8')
+            hval = sha1(localfilename).hexdigest()
             result, imtype = imagework(hval, filename, processdir)
-            fl.update({'name': hval, 'alt': u'img'})
+            fl.update({'name': hval, 'alt': 'img'})
             if result:
-                fl['src'] = os.path.join(CACHE_PATH, hval + imtype)
+                fl['src'] = os.path.join(CACHE_URL, hval + imtype)
             else:
-                fl['desc'] = u'Thumbinal creation.'
+                fl['desc'] = 'Thumbinal creation.'
                 thumbs = True
         else:
             if filetype:
@@ -146,8 +164,9 @@ def process(uri, environ):
             else:
                 filetype = 'text-plain'
             fl['alt'] = filetype
-            fl['src'] = u'/icon/%s.png' % filetype
-            fl['desc'] = filename
+            fl['src'] = '%s%s.png' % (ICONS_URL, filetype)
+            fl['desc'] = filename.decode('utf-8')
+            fl['w'] = 165
         content.append(fl)
     manager.clearOldFiles(processdir, filter(lambda x: \
                     x.has_key('alt') and x['alt'] == 'img', content))
@@ -156,11 +175,11 @@ def process(uri, environ):
     if template:
         rendered = template.render(version=version,
             time = Time.get(),
-            path = uri,
+            path = uri.decode('utf-8'),
             items = content,
-        ).encode('utf-8')
+        )
         if cache and not thumbs:
-            cache.set(processdir, {'modified': modified, 'data': rendered})
+            cache.set(processdirhash, {'modified': modified, 'data': rendered})
             close_cache()
         return rendered
 

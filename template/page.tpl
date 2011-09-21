@@ -1,3 +1,4 @@
+## -*- coding: utf-8 -*-
 <html>
     <head>
         <title>Index of ${path}</title>
@@ -16,7 +17,7 @@
                 % if item:
                 <td valign="top" align="center">
                     <a href="${ item.get('href') }">
-                        <img src="${item.get('src', '')}" width="165" height="165" alt="${item.get('alt', '')}" name="${item.get('name', '')}"><br />
+                        <img src="${item.get('src', '')}" ${ item.has_key('w') and 'width="%s"' % item.get('w') } alt="${item.get('alt', '')}" name="${item.get('name', '')}"><br />
                         % if item.has_key('desc'):
                         ${ item.get('desc') }
                         % endif
@@ -40,4 +41,3 @@
         </p>
     </body>
 </html>
-

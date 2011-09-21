@@ -2,8 +2,12 @@
 import os
 from PIL import Image
 from settings import IMAGES_DB, CACHE_PATH
-from skyfront import SQL
 from threading import Thread, Lock
+
+try:
+    from skyfront import SQL
+except ImportError:
+    SQL = None
 
 class ImageCreator(Thread):
 
@@ -30,20 +34,28 @@ class ImageCreator(Thread):
                 h = (float(h)/float(w))*maxsize
                 w = maxsize
             im.thumbnail((int(w),int(h)), Image.ANTIALIAS)
-            try: im.save(self.spath + ext, format)
-            #TODO: debug
+            try:
+                im.save(self.spath + ext, format)
             except IOError, e:
-                print str(e)
+                pass #print str(e)
+
 
 class Manager:
     def __init__(self):
+        if not SQL:
+            return
         self.sql = SQL('sqlite', IMAGES_DB)
 
     def addToBase(self, name, path, sha1):
-        print self.sql.insertNew('images', name=name, path=path, hash=sha1)
+        if not SQL:
+            return
+        self.sql.insertNew('images', name=name, path=path, hash=sha1)
 
     def clearOldFiles(self, path, files):
-        status, data = self.sql.getRecords('images', ['hash', 'id', 'name'], path=path)
+        if not SQL:
+            return
+        status, data = self.sql.getRecords('images', ['hash', 'id', 'name'],
+                                            path=path.decode('utf-8'))
         records = {}
         if status:
             for elem in data:
@@ -56,16 +68,19 @@ class Manager:
             for rname in records.keys():
                 record = records[rname]
                 self.sql.delete('images', id=record[0])
-                ext = record[1].rsplit('.', 1)[-1]))
-                if ext == 'jpeg'
+                ext = record[1].rsplit('.', 1)[-1]
+                if ext == 'jpeg':
                     ext = 'jpg'
-                os.unlink(os.path.join(CACHE_PATH,
-                    '%s.%s' % (rname, ext)
+                os.unlink(os.path.join(CACHE_PATH, '%s.%s' % (rname, ext)))
 
     def removeFromBase(self, name, path, sha1):
+        if not SQL:
+            return
         self.sql.delete('images', name=name, path=path, hash=sha1)
 
     def setupDB(self):
+        if not SQL:
+            return
         if not os.path.exists(IMAGES_DB):
             open(IMAGES_DB,'w').close()
             self.sql = SQL('sqlite', IMAGES_DB)
@@ -81,6 +96,8 @@ class Manager:
         #                        tag VARCHAR NOT NULL)""")
 
     def dropDB(self):
+        if not SQL:
+            return
         print self.sql.executeQuery('DROP TABLE `images`')
         #self.sql.executeQuery('DROP TABLE `tags`')
 
