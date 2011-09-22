@@ -1,55 +1,53 @@
 
 import os
-from PIL import Image
+from multiprocessing import Queue, Event
 from settings import IMAGES_DB, CACHE_PATH
-from threading import Thread, Lock
+from threads import ThreadPool
 
 try:
     from skyfront import SQL
 except ImportError:
     SQL = None
 
-class ImageCreator(Thread):
-
-    def __init__ (self, filename, fpath, spath):
-        Thread.__init__(self)
-        self.spath = spath
-        self.filepath = fpath
-        self.filename = filename
-
-    def run(self):
-        maxsize = 200
-        ext = '.jpg'
-        with open(os.path.join(self.filepath, self.filename)) as f:
-            im = Image.open(f)
-            format = im.format
-            if not format: format = 'JPEG'
-            if format == 'PNG': ext = '.png'
-            if format == 'GIF': ext = '.gif'
-            w,h = im.size
-            if h > w:
-                w = (float(w)/float(h))*maxsize
-                h = maxsize
-            else:
-                h = (float(h)/float(w))*maxsize
-                w = maxsize
-            im.thumbnail((int(w),int(h)), Image.ANTIALIAS)
-            try:
-                im.save(self.spath + ext, format)
-            except IOError, e:
-                pass #print str(e)
-
-
 class Manager:
+
     def __init__(self):
         if not SQL:
             return
         self.sql = SQL('sqlite', IMAGES_DB)
+        self.pool = None
+
+    def createMaker(self):
+        if self.pool and pool.is_active():
+            return
+        self.__image_queue = Queue()
+        self.__image_event = Event()
+        self.pool = ThreadPool(self.__image_queue, self.__image_event)
+        self.pool.start()
+
+    def killMaker(self):
+        self.__image_event.set()
+        self.pool = None
+
+    def __del__(self):
+        self.killMaker()
+
+    def imageProcess(self, hval, filename, path):
+        cpath = os.path.join(CACHE_PATH, hval)
+        for ext in ('.jpg', '.jpeg', '.png', '.gif'):
+            if os.path.isfile(cpath + ext):
+                return True, ext
+        self.createMaker()
+        self.__image_queue.put_nowait([filename, path, cpath])
+        self.addToBase(filename, path, hval)
+        return None, None
 
     def addToBase(self, name, path, sha1):
         if not SQL:
             return
-        self.sql.insertNew('images', name=name, path=path, hash=sha1)
+        self.sql.insertNew('images', name=name.decode('utf-8'),
+                                     path=path.decode('utf-8'),
+                                     hash=sha1.decode('utf-8'))
 
     def clearOldFiles(self, path, files):
         if not SQL:
@@ -68,7 +66,7 @@ class Manager:
             for rname in records.keys():
                 record = records[rname]
                 self.sql.delete('images', id=record[0])
-                ext = record[1].rsplit('.', 1)[-1]
+                ext = record[1].rsplit(u'.', 1)[-1]
                 if ext == 'jpeg':
                     ext = 'jpg'
                 os.unlink(os.path.join(CACHE_PATH, '%s.%s' % (rname, ext)))

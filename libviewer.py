@@ -7,7 +7,7 @@ import mime
 import time
 import re
 from hashlib import sha1
-from imagemanager import Manager, ImageCreator
+from imagemanager import Manager
 from settings import ROOT, CACHE_PATH, CACHE_URL, ICONS_URL, \
                      TEMPLATE_PATH, ERROR_STYLE
 
@@ -19,7 +19,7 @@ try:
 except:
     cache = None
 
-version = '2.0b1'
+version = '2.0b2'
 
 manager = Manager()
 
@@ -151,7 +151,7 @@ def process(uri, environ):
         if filetype and filetype.find('image') >= 0 and filetype.find('djvu') < 0:
             #FIXME: hash for files, not for paths
             hval = sha1(localfilename).hexdigest()
-            result, imtype = imagework(hval, filename, processdir)
+            result, imtype = manager.imageProcess(hval, filename, processdir)
             fl.update({'name': hval, 'alt': 'img'})
             if result:
                 fl['src'] = os.path.join(CACHE_URL, hval + imtype)
@@ -163,10 +163,12 @@ def process(uri, environ):
                 filetype = filetype.replace('/', '-')
             else:
                 filetype = 'text-plain'
-            fl['alt'] = filetype
-            fl['src'] = '%s%s.png' % (ICONS_URL, filetype)
-            fl['desc'] = filename.decode('utf-8')
-            fl['w'] = 165
+            fl.update({
+                'alt': filetype,
+                'src': '%s%s.png' % (ICONS_URL, filetype),
+                'desc': filename.decode('utf-8'),
+                'w': 165
+            })
         content.append(fl)
     manager.clearOldFiles(processdir, filter(lambda x: \
                     x.has_key('alt') and x['alt'] == 'img', content))
@@ -182,12 +184,3 @@ def process(uri, environ):
             cache.set(processdirhash, {'modified': modified, 'data': rendered})
             close_cache()
         return rendered
-
-def imagework(hval, filename, path):
-    cpath = os.path.join(CACHE_PATH, hval)
-    for ext in ('.jpg', '.jpeg', '.png', '.gif'):
-        if os.path.isfile(cpath + ext):
-            return True, ext
-    ImageCreator(filename, path, cpath).start()
-    manager.addToBase(filename, path, hval)
-    return None, None
