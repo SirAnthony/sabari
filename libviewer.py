@@ -19,7 +19,7 @@ try:
 except:
     cache = None
 
-version = '2.0b2'
+version = '2.0b3'
 
 manager = Manager()
 
@@ -150,7 +150,7 @@ def process(uri, environ):
         fl = {'href': '/%s' % localfilename.decode('utf-8') }
         if filetype and filetype.find('image') >= 0 and filetype.find('djvu') < 0:
             #FIXME: hash for files, not for paths
-            hval = sha1(localfilename).hexdigest()
+            hval = sha1(os.path.realpath(filename)).hexdigest().encode('utf-8')
             result, imtype = manager.imageProcess(hval, filename, processdir)
             fl.update({'name': hval, 'alt': 'img'})
             if result:

@@ -2,4 +2,4 @@
 
 import libviewer
 
-libviewer.pubdata()
+libviewer.putdata()

@@ -12,13 +12,12 @@ except ImportError:
 class Manager:
 
     def __init__(self):
-        if not SQL:
-            return
-        self.sql = SQL('sqlite', IMAGES_DB)
         self.pool = None
+        if SQL:
+            self.sql = SQL('sqlite', IMAGES_DB)
 
     def createMaker(self):
-        if self.pool and pool.is_active():
+        if self.pool and self.pool.is_alive():
             return
         self.__image_queue = Queue()
         self.__image_event = Event()
@@ -26,7 +25,8 @@ class Manager:
         self.pool.start()
 
     def killMaker(self):
-        self.__image_event.set()
+        if hasattr(self, '__image_event'):
+            self.__image_event.set()
         self.pool = None
 
     def __del__(self):
@@ -38,8 +38,8 @@ class Manager:
             if os.path.isfile(cpath + ext):
                 return True, ext
         self.createMaker()
-        self.__image_queue.put_nowait([filename, path, cpath])
         self.addToBase(filename, path, hval)
+        self.__image_queue.put_nowait([filename, path, cpath, hval])
         return None, None
 
     def addToBase(self, name, path, sha1):
@@ -87,6 +87,7 @@ class Manager:
                             name VARCHAR NOT NULL,
                             path VARCHAR NOT NULL,
                             hash VARCHAR NOT NULL,
+                            filehash VARCHAR,
                             UNIQUE (name, path))""")
         #self.sql.executeQuery("""CREATE TABLE IF NOT EXISTS `tags` (
         #                        id INTEGER PRIMARY KEY autoincrement,
