@@ -7,9 +7,9 @@ AddType text/plain .cpp
 AddType text/plain .c
 AddType text/plain .py
 
-RewriteCond /var/www/site%{REQUEST_URI}index.htm !-f
-RewriteCond /var/www/site%{REQUEST_URI}index.html !-f
-RewriteCond /var/www/site%{REQUEST_URI}index.php !-f
+RewriteCond  /var/www/site%{REQUEST_URI}index.htm !-f
+RewriteCond  /var/www/site%{REQUEST_URI}index.html !-f
+RewriteCond  /var/www/site%{REQUEST_URI}index.php !-f
 RewriteCond /var/www/site%{REQUEST_URI} -d
 RewriteRule ^(.*)$ /cgi-bin/viewer-resizer.py?d=/$1 [L]
 

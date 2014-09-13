@@ -1,193 +1,115 @@
-# -*- coding: utf-8 -*-
 
 import os
-
-import Cookie
-import mime
+import mimetypes
+import hashlib
+from PIL import Image
 import time
-import re
-from hashlib import sha1
-from imagemanager import Manager, ImageCreator
-from settings import ROOT, CACHE_PATH, CACHE_URL, ICONS_URL, \
-                     TEMPLATE_PATH, ERROR_STYLE
+from threading import Thread
 
-from mako import exceptions
-from mako.template import Template
+ver = 1.99
 
-try:
-    from cache import cache, close_cache
-except:
-    cache = None
+part = '/var/www/site'
 
-version = '2.0b1'
+starttime = time.time()
 
-manager = Manager()
-
-class Time:
-    time = time.time()
-    @classmethod
-    def get(cls):
-        return time.time() - cls.time
-    @classmethod
-    def now(cls):
-        cls.time = time.time()
-
-class NotFound(OSError):
-    pass
-class NotADir(OSError):
-    pass
-
-def serve(environ, start_response):
-    """serves requests using the WSGI callable interface."""
-    Time.now()
-
-    uri = environ.get('PATH_INFO', '/')
-
-    try:
-        tmpl = process(uri, environ)
-        start_response("200 OK", [('Content-type','text/html')])
-        return [tmpl]
-    except NotFound:
-        start_response("404 Not Found", [])
-        return ["Not found: '%s'" % uri]
-    except NotADir:
-        filename = os.path.join(ROOT, uri)
-        start_response("200 OK", [('Content-type', mime.guessType(uri))])
-        return [file(filename).read()]
-    except exceptions.TopLevelLookupException:
-        start_response("404 Not Found", [])
-        return ["Cant find template '%s'" % uri]
-    except:
-        if ERROR_STYLE == 'text':
-            start_response("200 OK", [('Content-type','text/plain')])
-            return [exceptions.text_error_template().render()]
-        else:
-            start_response("200 OK", [('Content-type','text/html')])
-            return [exceptions.html_error_template().render()]
-
-def pubdata():
-    from urllib import unquote
-    uri = unquote(os.environ.get('REQUEST_URI'))
-    ctype = 'text/html'
-    try:
-        text = process(uri, os.environ)
-    except NotFound:
-        text = "Not found: '%s'" % uri
-    except NotADir:
-        filename = os.path.join(ROOT, uri)
-        ctype = mime.guessType(uri)
-        text = file(filename).read()
-    except exceptions.TopLevelLookupException:
-        text = "Cant find template '%s'" % uri
-    except:
-        if ERROR_STYLE == 'text':
-            ctype = 'text/plain'
-            text = exceptions.text_error_template().render()
-        else:
-            text = exceptions.html_error_template().render()
-    print "Content-type: %s; charset=utf8\n" % ctype
-    print text
-
-def process(uri, environ):
-    if uri[0] == '/':
-        uri = uri[1:]
-    processdir = os.path.join(ROOT, uri)
-    processdirhash = sha1(processdir).hexdigest()
-
-    if not os.path.exists(processdir):
-        raise NotFound
-    if os.path.isfile(processdir):
-        raise NotADir
-
-    modified = os.stat(processdir).st_mtime
-    if cache:
-        c = cache.get(processdirhash)
-        if c and c['modified'] == modified:
-            close_cache()
-            data = re.sub('(?<=<span name="time">)[\d\.]+', str(Time.get()), c['data'])
-            return data
-
-    template = Template(filename=os.path.join(TEMPLATE_PATH, 'page.tpl'),
-                    input_encoding='utf-8', output_encoding='utf-8')
-
-    listing = os.listdir(processdir)
-    files = []
-    content = []
-    images = []
-    thumbs = False
-
-    if uri and uri != '/':
-        content.append({'href': '../', 'src': ICONS_URL + 'back.png',
-                'alt': 'Parent', 'desc': 'Parent directory',
-                'w': 165})
-
-    try:
-        cookie = Cookie.SimpleCookie()
-        cookie.load(environ.get('HTTP_COOKIE'))
-        cols = int(cookie.get('viewcols', 4))
-    except:
+def putdata(form):
+    if form.has_key('d'):
+        value = form['d'].value
+        mimetypes.init()
+        print "Content-type: text/html; charset=utf8\n\n";
+        print '''
+<html>
+	<head>
+		<title>Index of %s</title>
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<link href="/styles/mainst.css" rel="stylesheet" type="text/css">
+		<style>a img{border: 0px;}</style>
+	</head>
+	<body>
+		<h1>Index of %s</h1>
+		<hr>
+		<table>
+		    <tr>
+		        <td class="t1" valign="top" align="center" >
+			        <a href=".."><img src="/icon/back.png" width="165" height="165" alt="Parent"><br>Parent Directory</a>
+		        </td>
+''' % (value, value)
+        content = os.listdir(part+value)
+        files = []
+        td, tr = 1, 0
         cols = 4
-
-    for filename in listing:
-        if filename.find('.') == 0:
-            continue
-        if os.path.isfile(os.path.join(ROOT, uri, filename)):
-            files.append(filename)
-        else:
-            content.append({'href': os.path.join('/', uri, filename + '/').decode('utf-8'),
-                            'src': ICONS_URL + 'folder.png',
-                            'alt': 'Folder',
-                            'desc': filename.decode('utf-8'),
-                            'w': 165
-            })
-
-    for filename in files:
-        if filename.find('.') == 0:
-            continue
-        filename = filename
-        localfilename = os.path.join(uri, filename)
-        filetype = mime.guessType(filename)
-        fl = {'href': '/%s' % localfilename.decode('utf-8') }
-        if filetype and filetype.find('image') >= 0 and filetype.find('djvu') < 0:
-            #FIXME: hash for files, not for paths
-            hval = sha1(localfilename).hexdigest()
-            result, imtype = imagework(hval, filename, processdir)
-            fl.update({'name': hval, 'alt': 'img'})
-            if result:
-                fl['src'] = os.path.join(CACHE_URL, hval + imtype)
+        for filename in content:
+            if filename.find('.') == 0: continue
+            if os.path.isfile(part+value+'/'+filename):
+                files.append(filename)
             else:
-                fl['desc'] = 'Thumbinal creation.'
-                thumbs = True
-        else:
-            if filetype:
-                filetype = filetype.replace('/', '-')
+                if td > cols: td = 0
+                print '<td class="%s" valign="top" align="center">' % td
+                print '<a href="%s/"><img src="/icon/folder.png" width="165" height="165" alt="Dir">' % (os.path.join(value,filename))
+                print '<br>%s</a></td>' % filename
+                if td == cols: print '</tr><tr>'
+                td += 1
+        for filename in files:
+            #if filename.find('.') == 0: continue
+            if td > cols: td = 0
+            filetype = mimetypes.guess_type(filename)[0]
+            print '<td class="t%s" valign="top" align="center">' % td
+            print '<a href="%s" target="_blank">' % (os.path.join(value,filename))
+            if filetype and filetype.find('image') >= 0 and filetype.find('djvu') < 0:
+                hval = hashlib.md5(os.path.join(value,filename)).hexdigest()
+                result, imtype = imagework(hval, os.path.join(part+value ,filename))                
+                if result == 'ext':
+                    print '<img src="/cache/%s" alt="img">' % (hval + imtype)
+                else:
+                    print 'Thumbinal created.';
             else:
-                filetype = 'text-plain'
-            fl['alt'] = filetype
-            fl['src'] = '%s%s.png' % (ICONS_URL, filetype)
-            fl['desc'] = filename.decode('utf-8')
-            fl['w'] = 165
-        content.append(fl)
-    manager.clearOldFiles(processdir, filter(lambda x: \
-                    x.has_key('alt') and x['alt'] == 'img', content))
-    content.extend([None] * (cols - ((len(content) % cols) or cols)))
-    content = zip(*[iter(content)]*cols)
-    if template:
-        rendered = template.render(version=version,
-            time = Time.get(),
-            path = uri.decode('utf-8'),
-            items = content,
-        )
-        if cache and not thumbs:
-            cache.set(processdirhash, {'modified': modified, 'data': rendered})
-            close_cache()
-        return rendered
+                if filetype:
+                    filetype = filetype.replace('/', '-')
+                else:
+                    filetype = 'text-plain'
+                print '<img src="/icon/%s.png" width="165" height="165"><br>%s' % (filetype, filename)
+            print '</a></td>'
+            if td == cols: print '</tr><tr>'
+            td += 1
+        print '''</tr>
+</table><hr><p class="ft">
+Sabari v %s<br>
+Time: %0.5f s.<br>
+Original <a href="http://code.google.com/p/sabari/">script</a> by 
+<a href="mailto:anthony@adsorbtion.org\">Sir Anthony</a></p>
+''' % (ver, time.time() - starttime)
 
-def imagework(hval, filename, path):
-    cpath = os.path.join(CACHE_PATH, hval)
-    for ext in ('.jpg', '.jpeg', '.png', '.gif'):
+class ImageCreator(Thread):
+
+    def __init__ (self, filename, spath):
+        Thread.__init__(self)
+        self.spath = spath
+        self.filename = filename
+
+    def run(self):
+        maxsize = 200
+        ext = '.jpg'
+        im = Image.open(self.filename)
+        format = im.format        
+        if not format: format = 'JPEG'
+        if format == 'PNG': ext = '.png'
+        if format == 'GIF': ext = '.gif'
+        w,h = im.size
+        if h > w:
+            w = (float(w)/float(h))*maxsize
+            h = maxsize
+        else:
+            h = (float(h)/float(w))*maxsize
+            w = maxsize
+        im.thumbnail((int(w),int(h)), Image.ANTIALIAS)
+        try: im.save(self.spath + ext, format)
+        except IOError: pass
+
+def imagework(hval, filename):
+    cpath = '/var/www/cache/' + hval
+    for ext in ('.jpg', '.png', '.gif'):
         if os.path.isfile(cpath + ext):
-            return True, ext
-    ImageCreator(filename, path, cpath).start()
-    manager.addToBase(filename, path, hval)
-    return None, None
+            return 'ext', ext
+    ImageCreator(filename, cpath).start()
+    return 'crt', None
+

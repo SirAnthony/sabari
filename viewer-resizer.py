@@ -1,5 +1,6 @@
 #!/usr/bin/python
 
 import libviewer
+from cgi import FieldStorage
 
-libviewer.pubdata()
+libviewer.putdata(FieldStorage())
