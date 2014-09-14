@@ -1,5 +1,5 @@
 *.pyc
 *~
 *.db
-skyfront.py
-
+node_modules/
+*.swp

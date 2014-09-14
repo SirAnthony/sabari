@@ -1,0 +1,34 @@
+{
+  "name": "sabari",
+  "description": "Simlple lister frontend",
+  "version": "3.0.0",
+  "private": false,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SirAnthony/sabari.git"
+  },
+  "dependencies": {
+    "mongodb": "1.4.x",
+    "underscore": "1.7.x",
+    "express": "4.x.x",
+    "nunjucks": "1.x.x",
+    "i18n-abide": "0.0.x",
+    "mime": "1.2.x",
+    "easyimage": "1.x.x",
+    "touch": "0.0.x",
+    "memcached": "1.0.x"
+  },
+  "bugs": {
+    "url": "https://github.com/SirAnthony/sabari/issues"
+  },
+  "homepage": "https://github.com/SirAnthony/sabari",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "lister"
+  ],
+  "author": "Sir Anthony"
+}

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="{{ lang }}" dir="{{ lang_dir }}" itemscope itemtype="http://schema.org/WebPage">
+    <head>
+        <title>{% block title %}{{ format(gettext('Index of %s'), [dir]) }}{% endblock %}</title>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <meta name="viewport" content="width=device-width,initial-scale=0.6" />
+        <meta content="{{ title }}" about="{{ dir }}" property="dc:title" />
+        <link rel="icon" href="{{ STATIC_URL }}favicon.ico" type="image/vnd.microsoft.icon" />
+        <link href="{{ STATIC_URL }}mainst.css" rel="stylesheet" type="text/css">
+        <script type="text/javascript" src="{{ STATIC_URL }}sabari.js"></script>
+        <style>a img{border: 0px;}</style>
+    </head>
+    <body>
+        {% block content %}
+        <h1>{{ format(gettext('Index of %s'), [dir]) }}</h1>
+        <hr>
+        <table>
+            <tr>
+            {% for item in items %}
+            {% if (loop.index0 % 4) == 0 %}</tr><tr>{% endif %}
+                <td valign="top" align="center">
+                    <a href="{{ item.href }}"><img src="{{ item.src|d('') }}" {% if item.w -%} width="{{ item.w }}"
+                    {%- endif %} alt="{{ item.alt|d('') }}" name="{{ item.name|d('') }}"><br />{% if item.desc -%}
+                    {{ item.desc }}{%- endif %}</a>
+                </td>
+            {% endfor %}
+            <tr>
+        </table>
+        {% endblock %}
+        {% block footer %}
+        <hr>
+        <p class="ft">
+            {% if NOTIFICATIONS -%}
+                {% for notify in notifications -%}
+            <span class="notify">{{ gettext(notify) }}</span><br />
+                {%- endfor %}
+            {%- endif %}
+            Sabari v {{ VERSION }}<br />
+            {{ gettext('Time') }}:<span name="time">{{ time }}</span> s.<br />
+            Original <a href="https://github.com/SirAnthony/sabari">script</a> by
+            <a href="mailto:anthony[at]adsorbtion.org">Sir Anthony</a>
+        </p>
+        {% endblock %}
+    </body>
+</html>

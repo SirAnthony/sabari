@@ -20,3 +20,7 @@ text-align: center;
 #tagger img {
     float: left;
 }
+
+span.notify {
+    color: red;
+}

@@ -1,0 +1,10 @@
+{
+    "port": 3001,
+    "root": "/var/www/site/",
+    "cache_path": "/var/www/cache",
+    "cache_url": "/cache",
+    "icons_url": "/icon/",
+    "static_url": "/static/",
+    "template_path": "templates",
+    "database": "sabari"
+}
