@@ -1,0 +1,29 @@
+{
+  "name": "sabari",
+  "main": "index.js",
+  "version": "3.0.1",
+  "homepage": "https://github.com/SirAnthony/sabari",
+  "authors": [
+    "Sir Anthony <anthony@adsorbtion.org>"
+  ],
+  "description": "Simple lister frontend",
+  "moduleType": [
+    "node"
+  ],
+  "keywords": [
+    "listing",
+    "thumbnails"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "element": "~1.0.7",
+    "requirejs": "~2.1.15"
+  }
+}
