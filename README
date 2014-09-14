@@ -1,5 +1,5 @@
 Sabari provides directory listing, displaying images as thumbnails, and files as type-icons.
 
 Setup:
-npm install
+grunt deploy
 

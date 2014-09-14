@@ -6,8 +6,9 @@
         <meta name="viewport" content="width=device-width,initial-scale=0.6" />
         <meta content="{{ title }}" about="{{ dir }}" property="dc:title" />
         <link rel="icon" href="{{ STATIC_URL }}favicon.ico" type="image/vnd.microsoft.icon" />
-        <link href="{{ STATIC_URL }}mainst.css" rel="stylesheet" type="text/css">
-        <script type="text/javascript" src="{{ STATIC_URL }}sabari.js"></script>
+        <link href="{{ STATIC_URL }}sabari.min.css" rel="stylesheet" type="text/css">
+        <script src="{{ STATIC_URL }}/lib/element.js"></script>
+        <script data-main="{{ STATIC_URL }}sabari.min.js" src="{{ STATIC_URL }}/lib/require.js"></script>
         <style>a img{border: 0px;}</style>
     </head>
     <body>
@@ -15,16 +16,18 @@
         <h1>{{ format(gettext('Index of %s'), [dir]) }}</h1>
         <hr>
         <table>
-            <tr>
+            <tbody class="holder">
+            <tr class="row">
             {% for item in items %}
-            {% if (loop.index0 % 4) == 0 %}</tr><tr>{% endif %}
-                <td valign="top" align="center">
+            {% if loop.index0 and (loop.index0 % 4) == 0 %}</tr><tr class="row">{% endif %}
+                <td class="entity" valign="top" align="center">
                     <a href="{{ item.href }}"><img src="{{ item.src|d('') }}" {% if item.w -%} width="{{ item.w }}"
                     {%- endif %} alt="{{ item.alt|d('') }}" name="{{ item.name|d('') }}"><br />{% if item.desc -%}
                     {{ item.desc }}{%- endif %}</a>
                 </td>
             {% endfor %}
             <tr>
+            </tbody>
         </table>
         {% endblock %}
         {% block footer %}
@@ -41,5 +44,6 @@
             <a href="mailto:anthony[at]adsorbtion.org">Sir Anthony</a>
         </p>
         {% endblock %}
+        <script src="//localhost:35729/livereload.js"></script>
     </body>
 </html>
