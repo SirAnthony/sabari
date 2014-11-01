@@ -7,26 +7,37 @@
         <meta content="{{ title }}" about="{{ dir }}" property="dc:title" />
         <link rel="icon" href="{{ STATIC_URL }}favicon.ico" type="image/vnd.microsoft.icon" />
         <link href="{{ STATIC_URL }}sabari.min.css" rel="stylesheet" type="text/css">
-        <script src="{{ STATIC_URL }}/lib/element.js"></script>
         <script data-main="{{ STATIC_URL }}sabari.min.js" src="{{ STATIC_URL }}/lib/require.js"></script>
         <style>a img{border: 0px;}</style>
     </head>
     <body>
         {% block content %}
+        <input type="hidden" id="page" value="{{ page }}">
+        {% if page >= 0 -%}
+        <div class="paginator">
+            {% if page > 3 %}<a href="./" class="page">first</a>{% endif %}
+            {% for p in range(pmin, pmax) -%}
+                {% if p == page -%}
+                <span class="page">{{ p+1 }}</span>
+                {%- else -%}
+                <a href="./?p={{ p }}" class="page">{{ p+1 }}</a>
+                {%- endif %}
+            {%- endfor %}
+            {% if page < pages-3 %}<a href="./?p={{ pmax }}" class="page">last</a>{% endif %}
+        </div>
+        {%- endif %}
         <h1>{{ format(gettext('Index of %s'), [dir]) }}</h1>
         <hr>
         <table>
             <tbody class="holder">
-            <tr class="row">
-            {% for item in items %}
-            {% if loop.index0 and (loop.index0 % 4) == 0 %}</tr><tr class="row">{% endif %}
-                <td class="entity" valign="top" align="center">
+            <tr class="row">{% for item in items -%}
+            {% if loop.index0 and (loop.index0 % columns) == 0 %}</tr><tr class="row">{% endif %}
+                <td class="entity">
                     <a href="{{ item.href }}"><img src="{{ item.src|d('') }}" {% if item.w -%} width="{{ item.w }}"
                     {%- endif %} alt="{{ item.alt|d('') }}" name="{{ item.name|d('') }}"><br />{% if item.desc -%}
                     {{ item.desc }}{%- endif %}</a>
                 </td>
-            {% endfor %}
-            <tr>
+            {%- endfor %}</tr>
             </tbody>
         </table>
         {% endblock %}

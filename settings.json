@@ -1,10 +1,13 @@
 {
     "port": 3001,
-    "root": "/var/www/site/",
-    "cache_path": "/var/www/cache",
+    "root": "/var/www/site",
+    "cache_root": "/var/www/cache",
     "cache_url": "/cache",
+    "icons_root": "var/www/icon",
     "icons_url": "/icon/",
     "static_url": "/static/",
     "template_path": "templates",
+    "items_per_page": 50,
+    "items_columns": 4,
     "database": "sabari"
 }

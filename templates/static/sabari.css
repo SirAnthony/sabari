@@ -24,3 +24,27 @@ text-align: center;
 span.notify {
     color: red;
 }
+
+.paginator {
+    float: right;
+    padding-top: 0.7em;
+}
+
+.page {
+    margin: 0px 3px;
+}
+
+a:link, a:visited {
+    text-decoration: none;
+    color: #0068ef;
+}
+
+a:hover, a:active {
+    text-decoration: underline;
+    color: #0068ef;
+}
+
+.entity {
+    text-align: center;
+    vertical-align: top;
+}
