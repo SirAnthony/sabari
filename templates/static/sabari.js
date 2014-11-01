@@ -42,7 +42,10 @@ var processor = new Ajax.processor({
             images.push(entity(elems[count+i]));
         }
         holder.append([{tr: {className: 'row'}}, images]);
-        $('input#page').value = d.page >= d.pages-1 ? -1 : d.page;
+        var page = d.page >= d.pages-1 ? -1 : d.page;
+        $('input#page').value = page;
+        if (page<0)
+            remove_event(window, 'scroll', scroll);
     }
 });
 processor.catch$ = function(err){ throw err; };
@@ -86,13 +89,21 @@ function resize(){
 function add_event(obj, evType, fn){
     if (!obj)
         return false;
-    if (obj.addEventListener){
-        obj.addEventListener(evType, fn, false);
-        return true;
-    } else if(obj.attachEvent)
-        return obj.attachEvent('on'+evType, fn);
-    else
+    if (obj.addEventListener)
+        return obj.addEventListener(evType, fn, false)||true;
+    else if(obj.attachEvent)
+        return obj.attachEvent('on'+evType, fn)||true;
+    return false;
+}
+
+function remove_event(obj, evType, fn){
+    if (!obj)
         return false;
+    if (obj.removeEventListener)
+        return obj.removeEventListener(evType, fn, false)||true;
+    else if(obj.detachEvent)
+        return obj.detachEvent("on" + evType, fn)||true;
+    return false;
 }
 
 function onload(func){
@@ -103,7 +114,7 @@ function onload(func){
 
 onload(resize);
 add_event(window, 'resize', resize);
-if ($('input#page'))
+if (parseInt($('input#page').value)>=0)
     add_event(window, 'scroll', scroll);
 });
 
