@@ -6,7 +6,7 @@
   "authors": [
     "Sir Anthony <anthony@adsorbtion.org>"
   ],
-  "description": "Simple lister frontend",
+  "description": "Simple server lister",
   "moduleType": [
     "node"
   ],
