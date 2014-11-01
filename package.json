@@ -1,7 +1,7 @@
 {
   "name": "sabari",
   "description": "Simlple server lister",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "private": false,
   "license": "MIT",
   "repository": {
